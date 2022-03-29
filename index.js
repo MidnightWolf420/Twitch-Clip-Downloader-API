@@ -19,7 +19,7 @@ app.get(`/TTVClipDownloader`, async(req, res) => {
                     if(/"thumbnailUrl":\[.+?\]/g.test(result.data)){
                         var thumbnail = result.data.match(/"thumbnailUrl":\[.+?\]/g)[0].replace(/(("thumbnailUrl":)|\[|\]|")/g, '').split(',')[0]
                         var file = thumbnail.replace(/-preview-.+?x.+?.jpg/, '.mp4').substring(thumbnail.replace('-social-preview.jpg', '.mp4').lastIndexOf('/') + 1);    
-                        var newHtml = html.toString().replace(/%URL%/gi, `https://production.assets.clips.twitchcdn.net/${file}?sig=26a6ec5642e5bb5c831c9ab26a9a65d2a5f8800f&token=%7B%22authorization%22%3A%7B%22forbidden%22%3Afalse%2C%22reason%22%3A%22%22%7D%2C%22clip_uri%22%3A%22%22%2C%22device_id%22%3Anull%2C%22expires%22%3A1648592590%2C%22user_id%22%3A%22%22%2C%22version%22%3A2%7D`)
+                        var newHtml = html.toString().replace(/%URL%/gi, `https://production.assets.clips.twitchcdn.net/${file}?sig=26a6ec5642e5bb5c831c9ab26a9a65d2a5f8800f&token=%7B%22authorization%22%3A%7B%22forbidden%22%3Afalse%2C%22reason%22%3A%22%22%7D%2C%22clip_uri%22%3A%22%22%2C%22device_id%22%3Anull%2C%22expires%22%3A1648592590%2C%22user_id%22%3A%22%22%2C%22version%22%3A2%7D`).replace(/%TITLE%/gi, `Twitch Clip Downloader`)
                         res.end(newHtml);
                     } else console.log("Can't Find Thumbnail")
                 } else console.log(result.status)
