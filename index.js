@@ -10,7 +10,7 @@ app.get(`/TTVClipDownloader`, async(req, res) => {
     if(req.query['clip'] || req.query['url']){
         res.setHeader('X-Powered-By', 'Twitch Clip Downloader');
         res.writeHead(200, {'Content-Type': 'text/html'});
-        var html = fs.readFileSync('./index.html.txt');
+        var html = fs.readFileSync('./index.html');
         clipUrl = req.query['clip'] || req.query['url'];
         if(clipUrl.startsWith('https://clips.twitch.tv/')){
             clipID = clipUrl.split('/').filter(e => Boolean(e))[clipUrl.split('/').filter(e => Boolean(e)).length - 1];
