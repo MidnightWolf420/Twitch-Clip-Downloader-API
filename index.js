@@ -5,27 +5,81 @@ const axios = require('axios');
 const app = express();
 const port = 80;
 
+async function getURL(clientid, twitchClipId, sha256Hash = '6e465bb8446e2391644cf079851c0cb1b96928435a240f07ed4b240f0acc6f1b') {
+    var urlEndpoint = "https://gql.twitch.tv/gql";
+    return new Promise((success, failure) => {
+        this.id = twitchClipId;
+
+        const data = [{
+            operationName: "ClipsDownloadButton",
+            variables: {
+                slug: this.id,
+            },
+            extensions: {
+                persistedQuery: {
+                    version: 1,
+                    sha256Hash: sha256Hash,
+                }
+            },
+        }];
+
+        axios.post(urlEndpoint, data, {
+                headers: {
+                    "Client-Id": clientid,
+                }
+            }).then((responseEndpoint) => {
+
+                const response = responseEndpoint.data;
+
+                if (response.error || response.errors) {
+                    return failure(response.message);
+                }
+
+                const responseData = response[0];
+
+                if (responseData.errors) {
+                    return failure('Error in twitch response');
+                }
+
+                let url = '';
+
+                try {
+                    const playbackAccessToken = responseData.data.clip.playbackAccessToken;
+                    url = responseData.data.clip.videoQualities[0].sourceURL + '?sig=' + playbackAccessToken.signature + '&token=' + encodeURIComponent(playbackAccessToken.value);
+                } catch (err) {
+                    return failure('Error in parse video response');
+                }
+
+                if (url === '') {
+                    return failure('Error for obtain url of clip');
+                }
+
+                success(url);
+
+            }).catch((responseError) => {
+                failure(responseError);
+            });
+    });
+}
+
 app.use(bodyParser.json());
-app.get(`/TTVClipDownloader`, async(req, res) => {
+app.get(``, async(req, res) => {
     if(req.query['clip'] || req.query['url']){
         res.setHeader('X-Powered-By', 'Twitch Clip Downloader');
         res.writeHead(200, {'Content-Type': 'text/html'});
         var html = fs.readFileSync('./index.html');
-        clipUrl = req.query['clip'] || req.query['url'];
+        var clipUrl = req.query['clip'] || req.query['url'];
         if(clipUrl.startsWith('https://clips.twitch.tv/')){
             clipID = clipUrl.split('/').filter(e => Boolean(e))[clipUrl.split('/').filter(e => Boolean(e)).length - 1];
-            axios.get(clipUrl).then(result => {
-                if(result.status === 200){
-                    if(/"thumbnailUrl":\[.+?\]/g.test(result.data)){
-                        var thumbnail = result.data.match(/"thumbnailUrl":\[.+?\]/g)[0].replace(/(("thumbnailUrl":)|\[|\]|")/g, '').split(',')[0]
-                        var file = thumbnail.replace(/-preview-.+?x.+?.jpg/, '.mp4').substring(thumbnail.replace('-social-preview.jpg', '.mp4').lastIndexOf('/') + 1);    
-                        var newHtml = html.toString().replace(/%URL%/gi, `https://production.assets.clips.twitchcdn.net/${file}?sig=26a6ec5642e5bb5c831c9ab26a9a65d2a5f8800f&token=%7B%22authorization%22%3A%7B%22forbidden%22%3Afalse%2C%22reason%22%3A%22%22%7D%2C%22clip_uri%22%3A%22%22%2C%22device_id%22%3Anull%2C%22expires%22%3A1648592590%2C%22user_id%22%3A%22%22%2C%22version%22%3A2%7D`).replace(/%TITLE%/gi, `Twitch Clip Downloader`)
-                        res.end(newHtml);
-                    } else console.log("Can't Find Thumbnail")
-                } else console.log(result.status)
-            }).catch((err) => console.error(err));
-        } else res.status(404).end("Not Found");
-    } else res.status(404).end("Not Found");
+            var result = await axios.get("https://twitch.tv");
+            if(/clientId=".+?"/.test(result.data)){
+                var clientId = result.data.match(/clientId=".+?"/)[0].replace(/((clientId=")|")/gi, '')
+                var dlURL = await getURL(clientId, clipID);
+                var newHtml = html.toString().replace(/%URL%/gi, dlURL).replace(/%TITLE%/gi, `Twitch Clips Downloader`)
+                res.end(newHtml);
+            } else res.status(404).end("Not Found");
+        } else res.status(400).end("Please Provide A Twitch Clip With ?url=<Twitch Clip URL>");
+    } else res.status(400).end("Please Provide A Twitch Clip With ?url=<Twitch Clip URL>");
 });
 
 app.listen(port, () => {
